@@ -66,7 +66,10 @@ const splits = [
     {label: '10mi', distance: 10},
     {label: '20K', distance: 12.427},
     {label: 'HM', distance: 13.109},
+    {label: '30K', distance: 18.640},
+    {label: '40K', distance: 24.856},
     {label: 'M', distance: 26.218},
+    {label: '50K', distance: 31.1},
 ]
 
 let currentSplitIndex = 0
@@ -75,7 +78,7 @@ console.log(GPXCoords)
 let totalDist = 0
 let totalMovingDist = 0
 let distanceOfTrack = 0
-let increment = 15
+let increment = 18
 
 for (let i = 0; i < GPXCoords.length-1; i++) {
     let dist = haversineDistanceFT(GPXCoords[i].lat, GPXCoords[i].long, GPXCoords[i+1].lat, GPXCoords[i+1].long);
