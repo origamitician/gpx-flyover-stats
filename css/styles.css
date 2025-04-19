@@ -1,0 +1,20 @@
+table {
+    width: 80%;
+    border: 2px solid black;
+    font-family: "Mulish", sans-serif;
+}
+
+#tableheader {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    font-size: 125%;
+    text-align: center;
+}
+
+td {
+    font-size: 110%;
+    text-align: center;
+    border: 1px solid black;
+    padding: 0.1%;
+}
