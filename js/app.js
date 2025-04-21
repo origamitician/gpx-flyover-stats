@@ -69,62 +69,60 @@ const splits = [
     {label: '30K', distance: 18.640},
     {label: '40K', distance: 24.856},
     {label: 'M', distance: 26.218},
-    {label: '50K', distance: 31.1},
+    {label: 'whatevercomesafter26.2', distance: 31.1},
 ]
 
 let currentSplitIndex = 0
 
-console.log(GPXCoords)
 let totalDist = 0
 let totalMovingDist = 0
 let distanceOfTrack = 0
-let increment = 18
+let increment = 15
+let rawDataList = []
+let displayDataList = []
 
 for (let i = 0; i < GPXCoords.length-1; i++) {
     let dist = haversineDistanceFT(GPXCoords[i].lat, GPXCoords[i].long, GPXCoords[i+1].lat, GPXCoords[i+1].long);
     distanceOfTrack += dist
-
 }
-
 
 for (let i = 0; i < GPXCoords.length-1; i++) {
     let dist = haversineDistanceFT(GPXCoords[i].lat, GPXCoords[i].long, GPXCoords[i+1].lat, GPXCoords[i+1].long);
-    console.log(dist)
     
     totalDist += dist
     totalMovingDist += dist
-    if (i % increment == 0) {
+    if (i % increment == 0 && i > 0) {
         // every X seconds
-        const trow = document.createElement('tr')
+        rawDataList.push({
+            time: i,
+            distance: (totalDist / 5280),
+            pace: i / (totalDist / 5280),
+            instPace: increment / (totalMovingDist / 5280),
+            projFinish: i * (distanceOfTrack / totalDist)
+        })
 
-        let cell = document.createElement('td')
-        cell.innerHTML = convertToHMS(i, 0)
-        trow.appendChild(cell)
-
-        cell = document.createElement('td')
-        cell.innerHTML = (totalDist / 5280).toFixed(3)
-        trow.appendChild(cell)
-
-        cell = document.createElement('td')
-        cell.innerHTML = convertToHMS(i / (totalDist / 5280), 2) + "/mi"
-        trow.appendChild(cell)
-
-        cell = document.createElement('td')
-        cell.innerHTML = convertToHMS(increment / (totalMovingDist / 5280), 2) + "/mi"
-        trow.appendChild(cell)
-
-        cell = document.createElement('td')
-        cell.innerHTML = convertToHMS(i * (distanceOfTrack / totalDist))
-        trow.appendChild(cell)
-
-        cell = document.createElement('td')
         if (totalDist > splits[currentSplitIndex].distance * 5280) {
             currentSplitIndex++;
         }
-        cell.innerHTML = splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance * 5280 / totalDist))
-        trow.appendChild(cell)
 
-        document.getElementById('data').appendChild(trow)
+        displayDataList.push({
+            time: convertToHMS(i),
+            distance: (totalDist / 5280).toFixed(3),
+            pace: convertToHMS(i / (totalDist / 5280), 2) + "/mi",
+            instPace: convertToHMS(increment / (totalMovingDist / 5280), 2) + "/mi",
+            projFinish: convertToHMS(i * (distanceOfTrack / totalDist)),
+            splitPrediction: splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance * 5280 / totalDist))
+        })
         totalMovingDist = 0
     }
 }
+
+displayDataList.forEach((item) => {
+    const trow = document.createElement('tr')
+    Object.keys(item).forEach((key) => {
+        let cell = document.createElement('td')
+        cell.innerHTML = item[key]
+        trow.appendChild(cell)
+    })
+    document.getElementById('data').appendChild(trow)
+})

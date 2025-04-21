@@ -2,6 +2,7 @@ table {
     width: 80%;
     border: 2px solid black;
     font-family: "Mulish", sans-serif;
+    font-family: "National Park", sans-serif;
 }
 
 #tableheader {
@@ -17,4 +18,15 @@ td {
     text-align: center;
     border: 1px solid black;
     padding: 0.1%;
+}
+
+#animatedChart {
+    height: 200px;
+    border: 1px solid black;
+    width: 80%;
+    display: flex;
+}
+
+.verticalBars {
+    background-color: purple;
 }
