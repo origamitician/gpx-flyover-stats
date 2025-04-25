@@ -13,9 +13,14 @@
     <p>Paste GPX input here:</p>
     <textarea name="gpxInput" id="gpxInput" rows=15, cols=100></textarea>
 
-    <div id = "animatedChart"></div>
-    <button onclick="startBarGraph('instPace')">Draw</button>
+    <!--<div id = "animatedChart"></div>-->
+    <button onclick="startBarGraph('projFinish')">Draw</button>
+    <!--button onclick="drawBarGraphFrame('instPace', 500)">Draw</button>-->
 
+    <canvas id="myCanvas" width="1000" height="400"></canvas>
+    <p id = "prediction"></p>
+    <p id = "minY"></p>
+    <p id = "maxY"></p>
     <table id = "data">
         <tr id = "tableheader">
             <td>Time</td>
@@ -24,6 +29,7 @@
             <td>Instantaneous Pace</td>
             <td>Projected finish</td>
             <td>Split prediction</td>
+            <td>Cadence</td>
         </tr>
     </table>
 </body>

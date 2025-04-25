@@ -26,15 +26,28 @@ function haversineDistanceFT(lat1Deg, lon1Deg, lat2Deg, lon2Deg) {
 }
 
 const GPXArray = GPXInput.split('\n').map((item) => item.trim())
-const GPXCoords = []
+const GPXData = []
+const cadenceData = []
 GPXArray.forEach((item) => {
     if (item.includes("<trkpt")) {
-        GPXCoords.push({
+        GPXData.push({
             lat: Number(item.substring(item.indexOf('lat=')+5, item.indexOf('" lon='))), 
             long: Number(item.substring(item.indexOf('lon=')+5, item.indexOf('">'))), 
         })
     }
+
+    if (item.includes("<gpxtpx:cad>")) {
+        cadenceData.push(Number(item.substring(item.indexOf('<gpxtpx:cad>')+12, item.indexOf('</gpxtpx:cad>')))*2)
+    }
 })
+
+
+for (let i = 0; i < GPXData.length; i++) {
+    GPXData[i].cadence = cadenceData[i]
+}
+
+console.log(GPXData)
+
 
 function convertToHMS(seconds, decimalPlaces){
     let numOfDecimals;
@@ -76,21 +89,24 @@ let currentSplitIndex = 0
 
 let totalDist = 0
 let totalMovingDist = 0
+let totalMovingCadence = 0
 let distanceOfTrack = 0
 let increment = 15
 let rawDataList = []
 let displayDataList = []
 
-for (let i = 0; i < GPXCoords.length-1; i++) {
-    let dist = haversineDistanceFT(GPXCoords[i].lat, GPXCoords[i].long, GPXCoords[i+1].lat, GPXCoords[i+1].long);
+for (let i = 0; i < GPXData.length-1; i++) {
+    let dist = haversineDistanceFT(GPXData[i].lat, GPXData[i].long, GPXData[i+1].lat, GPXData[i+1].long);
     distanceOfTrack += dist
 }
 
-for (let i = 0; i < GPXCoords.length-1; i++) {
-    let dist = haversineDistanceFT(GPXCoords[i].lat, GPXCoords[i].long, GPXCoords[i+1].lat, GPXCoords[i+1].long);
+for (let i = 0; i < GPXData.length-1; i++) {
+    let dist = haversineDistanceFT(GPXData[i].lat, GPXData[i].long, GPXData[i+1].lat, GPXData[i+1].long);
     
     totalDist += dist
     totalMovingDist += dist
+    totalMovingCadence += GPXData[i+1].cadence
+
     if (i % increment == 0 && i > 0) {
         // every X seconds
         rawDataList.push({
@@ -98,7 +114,8 @@ for (let i = 0; i < GPXCoords.length-1; i++) {
             distance: (totalDist / 5280),
             pace: i / (totalDist / 5280),
             instPace: increment / (totalMovingDist / 5280),
-            projFinish: i * (distanceOfTrack / totalDist)
+            projFinish: i * (distanceOfTrack / totalDist),
+            cadence: totalMovingCadence / increment
         })
 
         if (totalDist > splits[currentSplitIndex].distance * 5280) {
@@ -111,9 +128,11 @@ for (let i = 0; i < GPXCoords.length-1; i++) {
             pace: convertToHMS(i / (totalDist / 5280), 2) + "/mi",
             instPace: convertToHMS(increment / (totalMovingDist / 5280), 2) + "/mi",
             projFinish: convertToHMS(i * (distanceOfTrack / totalDist)),
-            splitPrediction: splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance * 5280 / totalDist))
+            splitPrediction: splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance * 5280 / totalDist)),
+            cadence: (totalMovingCadence / increment).toFixed(1) + " spm"
         })
         totalMovingDist = 0
+        totalMovingCadence = 0
     }
 }
 

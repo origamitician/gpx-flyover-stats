@@ -5,6 +5,10 @@ table {
     font-family: "National Park", sans-serif;
 }
 
+body {
+    font-family: "National Park", sans-serif;
+}
+
 #tableheader {
     position: sticky;
     top: 0;
@@ -29,4 +33,14 @@ td {
 
 .verticalBars {
     background-color: purple;
+}
+
+#myCanvas {
+    border: 1px solid black;
+}
+
+#prediction {
+    font-size: 175%;
+    padding-top: 1%;
+    padding-bottom: 1%
 }
