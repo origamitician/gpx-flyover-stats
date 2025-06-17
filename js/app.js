@@ -28,26 +28,51 @@ function haversineDistanceFT(lat1Deg, lon1Deg, lat2Deg, lon2Deg) {
 const GPXArray = GPXInput.split('\n').map((item) => item.trim())
 const GPXData = []
 const cadenceData = []
+let trkID = 0
+const obj = {}
+
 GPXArray.forEach((item) => {
-    if (item.includes("<trkpt")) {
-        GPXData.push({
-            lat: Number(item.substring(item.indexOf('lat=')+5, item.indexOf('" lon='))), 
-            long: Number(item.substring(item.indexOf('lon=')+5, item.indexOf('">'))), 
-        })
+    // when the line opens up with "<trkpt", it must be a datapoint. Extract the datapoint info until it hits the closing "</trkpt> line."
+    let tempTime = null
+    if (item.substring(0, 6) == "<trkpt") { // instead of using item.includes, item.substring should be much faster.
+        obj.lat = Number(item.substring(item.indexOf('lat=')+5, item.indexOf('" lon=')))
+        obj.long = Number(item.substring(item.indexOf('lon=')+5, item.indexOf('">')))
     }
 
-    if (item.includes("<gpxtpx:cad>")) {
-        cadenceData.push(Number(item.substring(item.indexOf('<gpxtpx:cad>')+12, item.indexOf('</gpxtpx:cad>')))*2)
+    if (item.substring(0, 12) =="<gpxtpx:cad>") {
+        obj.cadence = Number(item.substring(item.indexOf('<gpxtpx:cad>')+12, item.indexOf('</gpxtpx:cad>')))*2
+    }
+
+    if (item.substring(0, 5) =="<ele>") {
+        obj.elev = Number(item.substring(item.indexOf('<ele>')+5, item.indexOf('</ele>')))
+    }
+
+    if (item.substring(0, 6) =="<time>") {
+        tempTime = new Date(item.substring(item.indexOf('<time>')+6, item.indexOf('</time>')))
+        obj.currPointTime = Date.parse(tempTime)/1000
+        
+        if (trkID == 0) {
+            obj.timeFromPreviousPoint = null
+        } else {
+            obj.timeFromPreviousPoint = obj.currPointTime - GPXData[GPXData.length - 1].currPointTime
+        }
+    }
+
+    if (item.substring(0, 7) =="</trkpt") {
+        obj.isDefault=true
+        unlinkedObj = {...obj}
+
+        GPXData.push(unlinkedObj)
+        trkID++;
+
+        obj.lat = null
+        obj.long = null
+        obj.cadence = null
+        obj.elev = null
+        obj.timeFromPreviousPoint = null
+
     }
 })
-
-
-for (let i = 0; i < GPXData.length; i++) {
-    GPXData[i].cadence = cadenceData[i]
-}
-
-console.log(GPXData)
-
 
 function convertToHMS(seconds, decimalPlaces){
     let numOfDecimals;
@@ -73,52 +98,125 @@ function convertToHMS(seconds, decimalPlaces){
 }
 
 const splits = [
-    {label: '5K', distance: 3.107},
-    {label: '10K', distance: 6.214},
-    {label: '15K', distance: 9.320},
-    {label: '10mi', distance: 10},
-    {label: '20K', distance: 12.427},
-    {label: 'HM', distance: 13.109},
-    {label: '30K', distance: 18.640},
-    {label: '40K', distance: 24.856},
-    {label: 'M', distance: 26.218},
-    {label: 'whatevercomesafter26.2', distance: 31.1},
+    {label: '1K', distance: 3280, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+     {label: '1mi', distance: 5280, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '2K', distance: 6560, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '3K', distance: 9840, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '2mi', distance: 10560, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '5K', distance: 16400, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '10K', distance: 32800, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '15K', distance: 49200, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '10mi', distance: 52800, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '20K', distance: 65600, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: 'HM', distance: 69168, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '30K', distance: 96840, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: '40K', distance: 131200, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: 'M', distance: 138336, fastestSplit: 99999, movingDist: null, startDist: null, endDist: null},
+    {label: 'whatevercomesafter26.2', distance: 31.1, fastestSplit: 99999, movingDist: null},
 ]
 
 let currentSplitIndex = 0
 
 let totalDist = 0
+let totalInstDist = 0
 let totalMovingDist = 0
 let totalMovingCadence = 0
 let distanceOfTrack = 0
-let increment = 15
+let increment = 5
+let movingSeconds = 60
 let rawDataList = []
 let displayDataList = []
 
-for (let i = 0; i < GPXData.length-1; i++) {
+// preprocess the GPX data by calculating full distance and checking for any gaps that are >1 second between datapoints.
+let i = 0
+while (i < GPXData.length-1) {
     let dist = haversineDistanceFT(GPXData[i].lat, GPXData[i].long, GPXData[i+1].lat, GPXData[i+1].long);
     distanceOfTrack += dist
+
+    if (GPXData[i+1].timeFromPreviousPoint > 1) {
+        console.log("BAD at " + i)
+        
+        let count = 0
+        while (count < GPXData[i+1].timeFromPreviousPoint - 1) {
+            const GPXDataEntryCopy = {...GPXData[i]}
+            GPXDataEntryCopy.currPointTime += (count+1)
+            GPXDataEntryCopy.isDefault = false
+            GPXData.splice(i+count, 0, GPXDataEntryCopy)
+            i++
+            count++
+        }
+    }
+    i++
 }
+
+console.log(GPXData)
 
 for (let i = 0; i < GPXData.length-1; i++) {
     let dist = haversineDistanceFT(GPXData[i].lat, GPXData[i].long, GPXData[i+1].lat, GPXData[i+1].long);
     
     totalDist += dist
-    totalMovingDist += dist
+    totalInstDist += dist
     totalMovingCadence += GPXData[i+1].cadence
+    
+    if (i < movingSeconds) {
+        totalMovingDist += dist
+    } else {
+        totalMovingDist += (dist - haversineDistanceFT(GPXData[i-movingSeconds].lat, GPXData[i-movingSeconds].long, GPXData[i-movingSeconds+1].lat, GPXData[i-movingSeconds+1].long))
+    }
 
     if (i % increment == 0 && i > 0) {
         // every X seconds
+        let movPace;
+        if (i < movingSeconds) {
+            movPace = i / (totalMovingDist / 5280)
+        } else {
+            movPace = movingSeconds / (totalMovingDist / 5280)
+        }
+
         rawDataList.push({
             time: i,
-            distance: (totalDist / 5280),
-            pace: i / (totalDist / 5280),
-            instPace: increment / (totalMovingDist / 5280),
+            distance: totalDist, // in inches
+            distanceDiff: (rawDataList.length == 0) ? totalDist : (totalDist - rawDataList[rawDataList.length - 1].distance),
+            pace: 3600 / (i / (totalDist / 5280)),
+            instPace: 3600 / (increment / (totalInstDist / 5280)),
+            movingPace: 3600 / movPace,
             projFinish: i * (distanceOfTrack / totalDist),
-            cadence: totalMovingCadence / increment
+            cadence: totalMovingCadence / increment,
+            elevation: GPXData[i].elev
         })
 
-        if (totalDist > splits[currentSplitIndex].distance * 5280) {
+        /*
+
+        for (let j = 0; j < splits.length; j++) {
+            if (totalDist > splits[j].distance) {
+                if (!splits[j].movingDist) {
+                    splits[j].movingDist = totalDist;
+                    splits[j].fastestSplit = i;
+                    splits[j].endDist = totalDist
+                    splits[j].startDist = 0
+                } else {
+                    let headVal = rawDataList[rawDataList.length - 1].distanceDiff
+                    let tailVal = rawDataList[rawDataList.length - Math.round(splits[j].fastestSplit / increment)].distanceDiff
+                    splits[j].movingDist += headVal - tailVal 
+
+                    while (splits[j].movingDist > splits[j].distance) {
+                        // move the tail forward.
+                        let tailIndex = rawDataList.length - 1 - Math.round(splits[j].fastestSplit / increment)
+                        splits[j].fastestSplit -= increment
+                        splits[j].movingDist -= rawDataList[tailIndex].distanceDiff
+                        splits[j].endDist = rawDataList[rawDataList.length - 1].distance
+                        splits[j].startDist = splits[j].endDist - splits[j].distance
+
+                    }
+                }
+            }
+        }
+
+       */ 
+
+        console.log(JSON.stringify(splits[3]))
+
+        if (totalDist > splits[currentSplitIndex].distance) {
             currentSplitIndex++;
         }
 
@@ -126,15 +224,27 @@ for (let i = 0; i < GPXData.length-1; i++) {
             time: convertToHMS(i),
             distance: (totalDist / 5280).toFixed(3),
             pace: convertToHMS(i / (totalDist / 5280), 2) + "/mi",
-            instPace: convertToHMS(increment / (totalMovingDist / 5280), 2) + "/mi",
+            instPace: convertToHMS(increment / (totalInstDist / 5280), 2) + "/mi",
+            movingPace: convertToHMS(movPace, 2) + "/mi",
             projFinish: convertToHMS(i * (distanceOfTrack / totalDist)),
-            splitPrediction: splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance * 5280 / totalDist)),
-            cadence: (totalMovingCadence / increment).toFixed(1) + " spm"
+            splitPrediction: splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance / totalDist)),
+            cadence: (totalMovingCadence / increment).toFixed(1) + " spm",
+            elevation: (GPXData[i].elev*3.28).toFixed(1) + "ft"
         })
-        totalMovingDist = 0
+        totalInstDist = 0
         totalMovingCadence = 0
     }
 }
+
+splits.forEach((item) => {
+    if (item.movingDist) {
+        const text = document.createElement('p')
+        text.innerHTML = `Fastest ${item.label} - <b>${convertToHMS(item.fastestSplit)}</b> (from ${(item.startDist / 5280).toFixed(3)} to ${(item.endDist / 5280).toFixed(3)} miles)`
+        document.getElementById("predictionDivs").appendChild(text)
+    }
+    
+})
+
 
 displayDataList.forEach((item) => {
     const trow = document.createElement('tr')

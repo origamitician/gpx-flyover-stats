@@ -1,4 +1,4 @@
-const scrollThreshold = 600
+const scrollThreshold = 250
 let graphYMin = 99999
 let graphYMax = -99999
 
@@ -9,15 +9,8 @@ let easing = 10
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-function removeBoxes () {
-    const boxes = document.querySelectorAll('.verticalBars');
 
-    boxes.forEach(box => {
-        box.remove();
-    });
-}
-
-function drawBarGraphFrame(prop, frameNum, offsetFrames, easing){
+function drawBarGraphFrame(prop, frameNum, offsetFrames, clr, easing){
     // console.log(frameNum)
     let prevTransX = 0
     let prevTransY = 0
@@ -31,8 +24,6 @@ function drawBarGraphFrame(prop, frameNum, offsetFrames, easing){
         clearInterval(graphInterval)
         return 0 // exit immediately
     }
-
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     // script to change max/min
     if(Math.floor(frameNum / easing) <= scrollThreshold){
@@ -81,7 +72,6 @@ function drawBarGraphFrame(prop, frameNum, offsetFrames, easing){
             translatedX = (canvasWidth/frameNum) * (frame)
         }
         
-
         let currentVal = rawDataList[Math.floor(frame/easing)][prop]
         let nextVal = rawDataList[Math.floor(frame/easing) + 1][prop]
         
@@ -89,13 +79,33 @@ function drawBarGraphFrame(prop, frameNum, offsetFrames, easing){
         ctx.beginPath();
 
         // console.log(translatedX + " " +translatedY)
-        
+        ctx.setLineDash([]);
         ctx.lineWidth = 4;
         ctx.strokeStyle = "purple";
         ctx.moveTo(prevTransX, prevTransY)
         ctx.lineTo(translatedX, translatedY) // consider quadraticCurvTo
         ctx.stroke(); // Render the path
         ctx.closePath()
+
+        if (((Math.floor(frame/easing) + 1) % 60) == 0) {
+
+            if (frame % easing == 0) {
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = "gray";
+                ctx.moveTo(translatedX, 0)
+                ctx.lineTo(translatedX, canvasHeight)
+                ctx.stroke(); // Render the path
+                ctx.closePath()
+
+                ctx.font = "15px National Park";
+                ctx.fillText(convertToHMS(rawDataList[Math.floor(frame/easing) + 1].time) + " (" + (rawDataList[Math.floor(frame/easing) + 1].distance/5280).toFixed(3) + "mi)", translatedX+10, 20);
+            }
+            // console.log("minute!")
+            // create the scrolling vertical lines.
+            
+        }
         prevTransX = translatedX
         prevTransY = translatedY
         
@@ -110,13 +120,16 @@ function drawBarGraphFrame(prop, frameNum, offsetFrames, easing){
 }
 
 let frame = 0
-let offset =0
+let offset = 0
+let elevationArr = rawDataList.map(a => a.elevation)
+let minElev = Math.min(...elevationArr)
+let maxElev = Math.max(...elevationArr)
 let graphInterval;
 function startBarGraph(prop) {
     graphInterval = setInterval(() => {
-        drawBarGraphFrame(prop, frame, offset, 1)
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        drawBarGraphFrame(prop, frame, offset, "purple", 3)
         frame+=1 // ik this is terrible
-        
     }, 30)
 }
 

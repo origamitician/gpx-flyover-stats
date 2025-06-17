@@ -14,22 +14,26 @@
     <textarea name="gpxInput" id="gpxInput" rows=15, cols=100></textarea>
 
     <!--<div id = "animatedChart"></div>-->
-    <button onclick="startBarGraph('projFinish')">Draw</button>
+    <button onclick="startBarGraph()">Draw</button>
     <!--button onclick="drawBarGraphFrame('instPace', 500)">Draw</button>-->
 
     <canvas id="myCanvas" width="1000" height="400"></canvas>
+    
     <p id = "prediction"></p>
+    <div id = "predictionDivs"></div>
     <p id = "minY"></p>
     <p id = "maxY"></p>
     <table id = "data">
         <tr id = "tableheader">
             <td>Time</td>
             <td>Distance (mi)</td>
-            <td>Avg Pace</td>
+            <td>Avg Pace Overall</td>
             <td>Instantaneous Pace</td>
+            <td>Avg Pace (last 60s)</td>
             <td>Projected finish</td>
             <td>Split prediction</td>
             <td>Cadence</td>
+            <td>Elevation</td>
         </tr>
     </table>
 </body>
@@ -37,5 +41,5 @@
 
 <script src="js/input.js"></script>
 <script src="js/app.js"></script>
-<script src="js/animatedgraph.js"></script>
+<script src="js/animatedgraphclass.js"></script>
 </html>
