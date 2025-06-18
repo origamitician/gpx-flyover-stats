@@ -1,7 +1,5 @@
 class AnimatedLineGraph {
     constructor (options) {
-        const canvas = document.getElementById("myCanvas");
-        this.ctx = canvas.getContext("2d");
         this.graphYMin = 99999
         this.graphYMax = -99999
         this.canvasWidth = 1000
@@ -15,21 +13,17 @@ class AnimatedLineGraph {
         this.prop = options.prop || "avgPace"
         this.easing = options.easing || 1
         this.frameNum = 0
-        
-    }
+        this.offsetYTop = options.offsetYTop || 0.2
+        this.offsetYBottom = options.offsetYBottom || 0.2
+        this.color = options.color || "purple"
+        this.fill = options.fill || false
 
-    startAnimation() {
-        const graphInterval = setInterval(() => {
-            // ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-            this.drawFrame(rawDataList, displayDataList)
-            this.frameNum+=1
-        }, 30)
+        const canvas = document.getElementById("myCanvas");
+        ctx = canvas.getContext("2d");
+        this.ctx = ctx
     }
-
-    
 
     drawFrame(rawDataList, displayDataList) {
-        this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
         // console.log(frameNum)
         this.prevTransX = 0
         this.prevTransY = 0
@@ -63,7 +57,7 @@ class AnimatedLineGraph {
 
             if (rawDataList[currentIndex][this.prop] >= this.graphYMax) {
                 this.graphYMax = rawDataList[currentIndex][this.prop]
-            } else if (rawDataList[currentIndex-scrollThreshold-1][this.prop] >= this.graphYMax) {
+            } else if (rawDataList[currentIndex-this.scrollThreshold-1][this.prop] >= this.graphYMax) {
                 const toLookFor = rawDataList.slice(currentIndex-this.scrollThreshold, currentIndex).map(item => item[this.prop])
                 this.graphYMax = Math.max(...toLookFor)
             }
@@ -88,19 +82,34 @@ class AnimatedLineGraph {
             
             let currentVal = rawDataList[Math.floor(frame/this.easing)][this.prop]
             let nextVal = rawDataList[Math.floor(frame/this.easing) + 1][this.prop]
+
+            const graphAreaHeightInPixels = this.canvasHeight*(1-this.offsetYTop-this.offsetYBottom)
             
-            this.translatedY = this.canvasHeight*0.8 - ((this.canvasHeight*0.6)*((currentVal-this.graphYMin)/(this.graphYMax - this.graphYMin))) - ((this.canvasHeight*0.6)*((frame%this.easing) / this.easing)*((nextVal - currentVal)/(this.graphYMax - this.graphYMin))) 
+            this.translatedY = this.canvasHeight*(1-this.offsetYBottom) - (graphAreaHeightInPixels*((currentVal-this.graphYMin)/(this.graphYMax - this.graphYMin))) - (graphAreaHeightInPixels*((frame%this.easing) / this.easing)*((nextVal - currentVal)/(this.graphYMax - this.graphYMin))) 
+
             this.ctx.beginPath();
-
-            // console.log(this.translatedX + " " +this.translatedY)
-            this.ctx.setLineDash([]);
-            this.ctx.lineWidth = 4;
-            this.ctx.strokeStyle = "purple";
-            this.ctx.moveTo(this.prevTransX, this.prevTransY)
-            this.ctx.lineTo(this.translatedX, this.translatedY) // consider quadraticCurvTo
-            this.ctx.stroke(); // Render the path
+            if (!this.fill) { // if the line graph is not supposed to be filled.
+                
+                // console.log(this.translatedX + " " +this.translatedY)
+                this.ctx.setLineDash([]);
+                this.ctx.lineWidth = 4;
+                this.ctx.strokeStyle = this.color;
+                this.ctx.moveTo(this.prevTransX, this.prevTransY)
+                this.ctx.lineTo(this.translatedX, this.translatedY) // consider quadraticCurvTo
+                this.ctx.stroke(); // Render the path
+                
+            } else { // if must be filled, fill a trapezoidal curve.
+                this.ctx.lineWidth = 4;
+                this.ctx.strokeStyle = this.color;
+                this.ctx.moveTo(this.prevTransX, this.prevTransY)
+                this.ctx.lineTo(this.prevTransX, this.canvasHeight)
+                this.ctx.lineTo(this.translatedX, this.canvasHeight)
+                this.ctx.lineTo(this.translatedX, this.translatedY)
+                this.ctx.fillStyle = this.color
+                this.ctx.fill()
+            }
             this.ctx.closePath()
-
+        
             if (((Math.floor(frame/this.easing) + 1) % 60) == 0) {
 
                 if (frame % this.easing == 0) {
@@ -133,13 +142,43 @@ class AnimatedLineGraph {
     }
 }
 
-function startBarGraph() {
+function startAnimation() {
+
+    const canvas = document.getElementById("myCanvas");
+    ctx = canvas.getContext("2d");
+    canvasWidth = 1000
+    canvasHeight = 400
+
     const userBarGraph = new AnimatedLineGraph(
         options = {
             prop: "movingPace",
-            easing: 3
+            easing: 3,
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight
         }
     )
 
-    userBarGraph.startAnimation()
+    const elevBarGraph = new AnimatedLineGraph(
+        options = {
+            prop: "elevation",
+            easing: 3,
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+            color: "lightgray",
+            offsetYBottom: 0.05,
+            offsetYTop: 0.7,
+            fill: true
+        }
+    )
+
+    const graphInterval = setInterval(() => {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        
+
+        elevBarGraph.drawFrame(rawDataList, displayDataList)
+        elevBarGraph.frameNum+=1
+
+        userBarGraph.drawFrame(rawDataList, displayDataList)
+        userBarGraph.frameNum+=1
+    }, 30)
 }
