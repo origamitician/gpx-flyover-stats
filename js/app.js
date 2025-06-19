@@ -121,6 +121,7 @@ let totalDist = 0
 let totalInstDist = 0
 let totalMovingDist = 0
 let totalMovingCadence = 0
+let totalInstElevGain = 0
 let distanceOfTrack = 0
 let increment = 5
 let movingSeconds = 60
@@ -153,10 +154,10 @@ console.log(GPXData)
 
 for (let i = 0; i < GPXData.length-1; i++) {
     let dist = haversineDistanceFT(GPXData[i].lat, GPXData[i].long, GPXData[i+1].lat, GPXData[i+1].long);
-    
     totalDist += dist
     totalInstDist += dist
     totalMovingCadence += GPXData[i+1].cadence
+    totalInstElevGain += (GPXData[i+1].elev - GPXData[i].elev)*3.28
     
     if (i < movingSeconds) {
         totalMovingDist += dist
@@ -175,14 +176,15 @@ for (let i = 0; i < GPXData.length-1; i++) {
 
         rawDataList.push({
             time: i,
-            distance: totalDist, // in inches
+            distance: totalDist, // in feet
             distanceDiff: (rawDataList.length == 0) ? totalDist : (totalDist - rawDataList[rawDataList.length - 1].distance),
             pace: 3600 / (i / (totalDist / 5280)),
             instPace: 3600 / (increment / (totalInstDist / 5280)),
             movingPace: 3600 / movPace,
             projFinish: i * (distanceOfTrack / totalDist),
             cadence: totalMovingCadence / increment,
-            elevation: GPXData[i].elev
+            elevation: GPXData[i].elev,
+            incline: (totalInstElevGain / totalInstDist) * 100
         })
 
         /*
@@ -229,12 +231,16 @@ for (let i = 0; i < GPXData.length-1; i++) {
             projFinish: convertToHMS(i * (distanceOfTrack / totalDist)),
             splitPrediction: splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance / totalDist)),
             cadence: (totalMovingCadence / increment).toFixed(1) + " spm",
-            elevation: (GPXData[i].elev*3.28).toFixed(1) + "ft"
+            elevation: (GPXData[i].elev*3.28).toFixed(1) + "ft",
+            incline: ((totalInstElevGain / totalInstDist) * 100).toFixed(2) + "%"
         })
         totalInstDist = 0
         totalMovingCadence = 0
+        totalInstElevGain = 0
     }
 }
+
+console.log(rawDataList)
 
 splits.forEach((item) => {
     if (item.movingDist) {

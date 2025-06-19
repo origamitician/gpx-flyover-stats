@@ -9,7 +9,7 @@ class AnimatedLineGraph {
         this.prevTransX = -1
         this.prevTransY = -1
 
-        this.scrollThreshold = options.scrollThreshold || 250
+        this.scrollThreshold = options.scrollThreshold || 150
         this.prop = options.prop || "avgPace"
         this.easing = options.easing || 1
         this.frameNum = 0
@@ -17,11 +17,48 @@ class AnimatedLineGraph {
         this.offsetYBottom = options.offsetYBottom || 0.2
         this.color = options.color || "purple"
         this.fill = options.fill || false
+        this.spectrum = options.spectrum || []
 
         const canvas = document.getElementById("myCanvas");
         ctx = canvas.getContext("2d");
         this.ctx = ctx
     }
+
+    hexToRgb(hex) {
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    }
+
+    componentToHex(c) {
+        var hex = c.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+    }
+    
+    rgbToHex(r, g, b) {
+        return "#" + this.componentToHex(r) + this.componentToHex(g) + this.componentToHex(b);
+    }
+
+    getIntermediateColor(c1, c2, minVal, maxVal, val) {
+        const percentage = (val - minVal) / (maxVal - minVal)
+        const clr1 = this.hexToRgb(c1)
+        const clr2 = this.hexToRgb(c2)
+        if (percentage <= 0) {
+            return clr1;
+        } else if (percentage >= 100) {
+            return clr2;
+        } 
+        
+        const rRes = Math.round(clr1.r + (clr2.r - clr1.r) * percentage)
+        const gRes = Math.round(clr1.g + (clr2.g - clr1.g) * percentage)
+        const bRes = Math.round(clr1.b + (clr2.b - clr1.b) * percentage)
+        console.log(rRes + "," + gRes + "," + bRes)
+        return this.rgbToHex(rRes, gRes, bRes)
+    }
+
 
     drawFrame(rawDataList, displayDataList) {
         // console.log(frameNum)
@@ -67,8 +104,8 @@ class AnimatedLineGraph {
         }
 
         for(var frame = loopBeginFrame; frame < this.frameNum; frame++){
-                // Start a new path
-            // ctx.moveTo(30, 50); // Move the pen to (30, 50)
+            
+            // calculate X and Y.
             if (frame == 0) {
                 this.prevTransX = 0
                 this.prevTransY = this.canvasHeight
@@ -87,25 +124,43 @@ class AnimatedLineGraph {
             
             this.translatedY = this.canvasHeight*(1-this.offsetYBottom) - (graphAreaHeightInPixels*((currentVal-this.graphYMin)/(this.graphYMax - this.graphYMin))) - (graphAreaHeightInPixels*((frame%this.easing) / this.easing)*((nextVal - currentVal)/(this.graphYMax - this.graphYMin))) 
 
+            // figure out the fill color.
+
+            let variableToUseForColor = (this.prop == "elevation") ? "incline" : this.prop
+
+            let variableReadingForColor = rawDataList[Math.floor(frame/this.easing) + 1][variableToUseForColor]
+            let graphColor;
+
+            if (this.spectrum.length == 0) {
+                graphColor = this.color
+            } else if (this.spectrum.length == 2) {
+                graphColor = this.getIntermediateColor(this.spectrum[0].color, this.spectrum[1].color, this.spectrum[0].value, this.spectrum[1].value, variableReadingForColor)
+            } else if (this.spectrum.length == 3) {
+                if (variableReadingForColor <= this.spectrum[1].value) {
+                    graphColor = this.getIntermediateColor(this.spectrum[0].color, this.spectrum[1].color, this.spectrum[0].value, this.spectrum[1].value, variableReadingForColor)
+                } else {
+                    graphColor = this.getIntermediateColor(this.spectrum[1].color, this.spectrum[2].color, this.spectrum[1].value, this.spectrum[2].value, variableReadingForColor)
+                }
+            }
+            
+            // now that translatedX and translatedY is calculated + color is identified, draw.
             this.ctx.beginPath();
             if (!this.fill) { // if the line graph is not supposed to be filled.
                 
                 // console.log(this.translatedX + " " +this.translatedY)
                 this.ctx.setLineDash([]);
                 this.ctx.lineWidth = 4;
-                this.ctx.strokeStyle = this.color;
+                this.ctx.strokeStyle = graphColor
                 this.ctx.moveTo(this.prevTransX, this.prevTransY)
                 this.ctx.lineTo(this.translatedX, this.translatedY) // consider quadraticCurvTo
                 this.ctx.stroke(); // Render the path
                 
             } else { // if must be filled, fill a trapezoidal curve.
-                this.ctx.lineWidth = 4;
-                this.ctx.strokeStyle = this.color;
                 this.ctx.moveTo(this.prevTransX, this.prevTransY)
                 this.ctx.lineTo(this.prevTransX, this.canvasHeight)
                 this.ctx.lineTo(this.translatedX, this.canvasHeight)
                 this.ctx.lineTo(this.translatedX, this.translatedY)
-                this.ctx.fillStyle = this.color
+                this.ctx.fillStyle = graphColor
                 this.ctx.fill()
             }
             this.ctx.closePath()
@@ -167,7 +222,8 @@ function startAnimation() {
             color: "lightgray",
             offsetYBottom: 0.05,
             offsetYTop: 0.7,
-            fill: true
+            fill: true,
+            spectrum: [{color: "#509c44", value: -2}, {color: "#959c94", value: 0}, {color: "#bf1b41", value: 2}]
         }
     )
 
