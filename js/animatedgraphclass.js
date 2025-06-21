@@ -9,7 +9,7 @@ class AnimatedLineGraph {
         this.prevTransX = -1
         this.prevTransY = -1
 
-        this.scrollThreshold = options.scrollThreshold || 150
+        this.scrollThreshold = options.scrollThreshold || 35
         this.prop = options.prop || "avgPace"
         this.easing = options.easing || 1
         this.frameNum = 0
@@ -18,6 +18,12 @@ class AnimatedLineGraph {
         this.color = options.color || "purple"
         this.fill = options.fill || false
         this.spectrum = options.spectrum || []
+
+        if (this.spectrum.length > 0) {
+            this.spectrum.unshift({color: this.spectrum[0].color, value: -99999}) // add this so the loop below would always terminate.
+            this.spectrum.push({color: this.spectrum[this.spectrum.length-1].color, value: 99999}) // add this so the loop below would always terminate.
+        }
+        
 
         const canvas = document.getElementById("myCanvas");
         ctx = canvas.getContext("2d");
@@ -55,7 +61,7 @@ class AnimatedLineGraph {
         const rRes = Math.round(clr1.r + (clr2.r - clr1.r) * percentage)
         const gRes = Math.round(clr1.g + (clr2.g - clr1.g) * percentage)
         const bRes = Math.round(clr1.b + (clr2.b - clr1.b) * percentage)
-        console.log(rRes + "," + gRes + "," + bRes)
+        // console.log(rRes + "," + gRes + "," + bRes)
         return this.rgbToHex(rRes, gRes, bRes)
     }
 
@@ -103,45 +109,59 @@ class AnimatedLineGraph {
             scrolling = true
         }
 
-        for(var frame = loopBeginFrame; frame < this.frameNum; frame++){
+        console.log("loopbeginframe is: " + loopBeginFrame)
+
+        for(var subInterval = loopBeginFrame; subInterval < this.frameNum+1; subInterval++){
             
             // calculate X and Y.
-            if (frame == 0) {
+            if (subInterval == 0 || subInterval == loopBeginFrame) {
                 this.prevTransX = 0
-                this.prevTransY = this.canvasHeight
+                this.prevTransY = 0
             }
 
             if (scrolling) {
-                this.translatedX = (this.canvasWidth/(this.scrollThreshold * this.easing)) * (frame-loopBeginFrame)
+                this.translatedX = (this.canvasWidth/(this.scrollThreshold * this.easing)) * (subInterval-loopBeginFrame)
             } else {
-                this.translatedX = (this.canvasWidth/this.frameNum) * (frame)
+                this.translatedX = (this.canvasWidth/this.frameNum) * (subInterval)
             }
             
-            let currentVal = rawDataList[Math.floor(frame/this.easing)][this.prop]
-            let nextVal = rawDataList[Math.floor(frame/this.easing) + 1][this.prop]
+            let currentVal = rawDataList[Math.floor(subInterval/this.easing)][this.prop]
+
+            /*
+            if (Math.floor(subInterval/this.easing == 0)) { // if it's the first entry
+                currentVal = rawDataList[Math.floor(subInterval/this.easing)+1][this.prop]
+            } else {
+                
+            }*/
+
+            let nextVal = rawDataList[Math.floor(subInterval/this.easing)+1][this.prop]
 
             const graphAreaHeightInPixels = this.canvasHeight*(1-this.offsetYTop-this.offsetYBottom)
             
-            this.translatedY = this.canvasHeight*(1-this.offsetYBottom) - (graphAreaHeightInPixels*((currentVal-this.graphYMin)/(this.graphYMax - this.graphYMin))) - (graphAreaHeightInPixels*((frame%this.easing) / this.easing)*((nextVal - currentVal)/(this.graphYMax - this.graphYMin))) 
+            this.translatedY = this.canvasHeight*(1-this.offsetYBottom) - (graphAreaHeightInPixels*((currentVal-this.graphYMin)/(this.graphYMax - this.graphYMin))) - (graphAreaHeightInPixels*((subInterval%this.easing) / this.easing)*((nextVal - currentVal)/(this.graphYMax - this.graphYMin))) 
 
             // figure out the fill color.
 
             let variableToUseForColor = (this.prop == "elevation") ? "incline" : this.prop
 
-            let variableReadingForColor = rawDataList[Math.floor(frame/this.easing) + 1][variableToUseForColor]
+            let variableReadingForColor = rawDataList[Math.floor(subInterval/this.easing)][variableToUseForColor]
             let graphColor;
 
             if (this.spectrum.length == 0) {
                 graphColor = this.color
             } else if (this.spectrum.length == 2) {
                 graphColor = this.getIntermediateColor(this.spectrum[0].color, this.spectrum[1].color, this.spectrum[0].value, this.spectrum[1].value, variableReadingForColor)
-            } else if (this.spectrum.length == 3) {
-                if (variableReadingForColor <= this.spectrum[1].value) {
-                    graphColor = this.getIntermediateColor(this.spectrum[0].color, this.spectrum[1].color, this.spectrum[0].value, this.spectrum[1].value, variableReadingForColor)
-                } else {
-                    graphColor = this.getIntermediateColor(this.spectrum[1].color, this.spectrum[2].color, this.spectrum[1].value, this.spectrum[2].value, variableReadingForColor)
+            } else {
+                
+
+                for (let i = 1; i < this.spectrum.length; i++) {
+                    if (variableReadingForColor <= this.spectrum[i].value) {
+                        graphColor = this.getIntermediateColor(this.spectrum[i-1].color, this.spectrum[i].color, this.spectrum[i-1].value, this.spectrum[i].value, variableReadingForColor)
+                        // console.log(graphColor)
+                        break;
+                    }
                 }
-            }
+            } 
             
             // now that translatedX and translatedY is calculated + color is identified, draw.
             this.ctx.beginPath();
@@ -165,9 +185,9 @@ class AnimatedLineGraph {
             }
             this.ctx.closePath()
         
-            if (((Math.floor(frame/this.easing) + 1) % 60) == 0) {
+            if (((Math.floor(subInterval/this.easing) + 1) % 60) == 0) {
 
-                if (frame % this.easing == 0) {
+                if (subInterval % this.easing == 0) {
                     this.ctx.beginPath();
                     this.ctx.lineWidth = 2;
                     this.ctx.setLineDash([5, 5]);
@@ -178,7 +198,7 @@ class AnimatedLineGraph {
                     this.ctx.closePath()
 
                     this.ctx.font = "15px National Park";
-                    this.ctx.fillText(convertToHMS(rawDataList[Math.floor(frame/this.easing) + 1].time) + " (" + (rawDataList[Math.floor(frame/this.easing) + 1].distance/5280).toFixed(3) + "mi)", this.translatedX+10, 20);
+                    this.ctx.fillText(convertToHMS(rawDataList[Math.floor(subInterval/this.easing) + 1].time) + " (" + (rawDataList[Math.floor(subInterval/this.easing) + 1].distance/5280).toFixed(3) + "mi)", this.translatedX+10, 20);
                 }
                 // console.log("minute!")
                 // create the scrolling vertical lines.
@@ -188,10 +208,17 @@ class AnimatedLineGraph {
             this.prevTransY = this.translatedY
             
         }
-        // let curr = rawDataList[Math.floor(frame/easing)][prop]
-        // let next = rawDataList[Math.floor(frame/easing) + 1][prop]
-        // document.getElementById('prediction').innerHTML = "Current: " + convertToHMS(curr + ((next - curr) *((frame%easing) / easing)), 2)
-        document.getElementById('prediction').innerHTML = displayDataList[Math.floor(frame/this.easing)][this.prop]
+        // let curr = rawDataList[Math.floor(subInterval/easing)][prop]
+        // let next = rawDataList[Math.floor(subInterval/easing) + 1][prop]
+        // document.getElementById('prediction').innerHTML = "Current: " + convertToHMS(curr + ((next - curr) *((subInterval%easing) / easing)), 2)
+        if (this.prop != "elevation") {
+            document.getElementById('prediction_user').innerHTML = "Pace: " + displayDataList[Math.floor(subInterval/this.easing)-1][this.prop] 
+        } else {
+            document.getElementById('prediction_elev').innerHTML = "Elevation: " + displayDataList[Math.floor(subInterval/this.easing)-1][this.prop] 
+            + " (" + displayDataList[Math.floor(subInterval/this.easing)-1].incline  + " gradient)"
+        }
+
+        
         document.getElementById('minY').innerHTML = "minimum Y: " + this.graphYMin
         document.getElementById('maxY').innerHTML = "maximum Y: " + this.graphYMax
     }
@@ -207,34 +234,41 @@ function startAnimation() {
     const userBarGraph = new AnimatedLineGraph(
         options = {
             prop: "movingPace",
-            easing: 3,
+            easing: 1,
             canvasWidth: canvasWidth,
             canvasHeight: canvasHeight
         }
     )
 
+    
+
     const elevBarGraph = new AnimatedLineGraph(
         options = {
             prop: "elevation",
-            easing: 3,
+            easing: 1,
             canvasWidth: canvasWidth,
             canvasHeight: canvasHeight,
             color: "lightgray",
             offsetYBottom: 0.05,
             offsetYTop: 0.7,
             fill: true,
-            spectrum: [{color: "#509c44", value: -2}, {color: "#959c94", value: 0}, {color: "#bf1b41", value: 2}]
+            spectrum: [{color: "#19a8a1", value: -5}, {color: "#00db16", value: -3.25}, {color: "#959c94", value: 0}, {color: "#e39f20", value: 3.25}, {color: "#fc0362", value: 5}]
         }
     )
 
     const graphInterval = setInterval(() => {
-        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        if (elevBarGraph.frameNum >= (rawDataList.length - 1) * elevBarGraph.easing) {
+
+            clearInterval(graphInterval)
+        } else {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            elevBarGraph.drawFrame(rawDataList, displayDataList)
+            elevBarGraph.frameNum+=1
+
+            userBarGraph.drawFrame(rawDataList, displayDataList)
+            userBarGraph.frameNum+=1
+        }
         
-
-        elevBarGraph.drawFrame(rawDataList, displayDataList)
-        elevBarGraph.frameNum+=1
-
-        userBarGraph.drawFrame(rawDataList, displayDataList)
-        userBarGraph.frameNum+=1
-    }, 30)
+    }, 200)
 }
