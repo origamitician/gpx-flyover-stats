@@ -9,7 +9,7 @@ class AnimatedLineGraph {
         this.prevTransX = -1
         this.prevTransY = -1
 
-        this.scrollThreshold = options.scrollThreshold || 35
+        this.scrollThreshold = options.scrollThreshold || 50
         this.prop = options.prop || "avgPace"
         this.easing = options.easing || 1
         this.frameNum = 0
@@ -252,7 +252,7 @@ function startAnimation() {
             offsetYBottom: 0.05,
             offsetYTop: 0.7,
             fill: true,
-            spectrum: [{color: "#19a8a1", value: -5}, {color: "#00db16", value: -3.25}, {color: "#959c94", value: 0}, {color: "#e39f20", value: 3.25}, {color: "#fc0362", value: 5}]
+            spectrum: [{color: "#19a8a1", value: -12.5}, {color: "#00db16", value: -8}, {color: "#959c94", value: 0}, {color: "#e39f20", value: 8}, {color: "#fc0362", value: 12.5}]
         }
     )
 
@@ -270,5 +270,5 @@ function startAnimation() {
             userBarGraph.frameNum+=1
         }
         
-    }, 200)
+    }, 50)
 }
