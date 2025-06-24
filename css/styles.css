@@ -39,8 +39,30 @@ td {
     border: 1px solid black;
 }
 
-#prediction {
+#prediction_user, #prediction_elev {
     font-size: 175%;
     padding-top: 1%;
     padding-bottom: 1%
+}
+
+#graphStatHolder {
+    display: flex;
+    width: 100%;
+}
+
+.indivGraphStat {
+    border: 1px solid gray;
+    box-sizing: border-box;
+}
+
+.valueDisplay {
+    font-size: 225%;
+    text-align: center;
+    margin: 3% 0 3% 0
+}
+
+.valueVariable {
+    letter-spacing: 3px;
+    text-align: center;
+    margin: 1% 0 2% 0
 }

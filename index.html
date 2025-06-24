@@ -18,9 +18,19 @@
     <!--button onclick="drawBarGraphFrame('instPace', 500)">Draw</button>-->
 
     <canvas id="myCanvas" width="1000" height="400"></canvas>
+    <div id = "graphStatHolder">
+        <div class = "indivGraphStat" id="graph_time">
+            <p class = "valueDisplay"></p>
+            <p class = "valueVariable">ELAPSED TIME</p>
+        </div>
+
+         <div class = "indivGraphStat" id="graph_distance">
+            <p class = "valueDisplay"></p>
+            <p class = "valueVariable">DISTANCE</p>
+        </div>
+    </div>
     
-    <p id = "prediction_user"></p>
-    <p id = "prediction_elev"></p>
+
     <div id = "predictionDivs"></div>
     <p id = "minY"></p>
     <p id = "maxY"></p>
@@ -41,7 +51,7 @@
 </body>
 
 
-<script src="js/GPXparser.js"></script>
-<script src="js/app.js"></script>
+<script src="js/GPXtoRawPoints.js"></script>
+<script src="js/rawPointsProcess.js"></script>
 <script src="js/animatedgraphclass.js"></script>
 </html>

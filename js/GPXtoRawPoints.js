@@ -17,7 +17,7 @@ document.getElementById('gpxFileInput').addEventListener('change', function (evt
                 let obj = {}
                 obj.lat = trkpts[i].getAttribute('lat');
                 obj.long = trkpts[i].getAttribute('lon');
-                obj.elev = trkpts[i].getElementsByTagName('ele')[0]?.textContent;
+                obj.elev = Number(trkpts[i].getElementsByTagName('ele')[0]?.textContent)*3.28;
                 obj.currPointTime = Date.parse(new Date(trkpts[i].getElementsByTagName('time')[0]?.textContent))/1000;
                 obj.cadence = trkpts[i].getElementsByTagName('gpxtpx:cad')[0]?.textContent;
                 
@@ -28,7 +28,7 @@ document.getElementById('gpxFileInput').addEventListener('change', function (evt
                 }
                 GPXData.push(obj)
             }
-            console.log(GPXData)
+            processRawPoints(GPXData) // call on the processing function in rawPointsProcess.js.
         }
 
         reader.readAsText(file)

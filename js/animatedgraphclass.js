@@ -9,7 +9,7 @@ class AnimatedLineGraph {
         this.prevTransX = -1
         this.prevTransY = -1
 
-        this.scrollThreshold = options.scrollThreshold || 50
+        this.scrollThreshold = options.scrollThreshold || 150
         this.prop = options.prop || "avgPace"
         this.easing = options.easing || 1
         this.frameNum = 0
@@ -24,10 +24,31 @@ class AnimatedLineGraph {
             this.spectrum.push({color: this.spectrum[this.spectrum.length-1].color, value: 99999}) // add this so the loop below would always terminate.
         }
         
-
         const canvas = document.getElementById("myCanvas");
         ctx = canvas.getContext("2d");
         this.ctx = ctx
+
+        const d = document.createElement('div')
+        d.className = 'indivGraphStat'
+        d.id = 'graph_' + this.prop
+
+        const valueDisplay = document.createElement('p');
+        valueDisplay.className = 'valueDisplay'
+        d.appendChild(valueDisplay)
+
+        const valueVariable = document.createElement('p');
+        valueVariable.className = 'valueVariable'
+        valueVariable.innerHTML = (this.prop).replace(/([a-z])([A-Z])/g, '$1 $2').toUpperCase();
+        d.appendChild(valueVariable)
+
+        const numChildren = document.getElementsByClassName('indivGraphStat').length
+        d.style.width = (100 / (numChildren + 1)) + "%"
+
+        for (let i = 0; i < numChildren; i++) {
+            document.getElementsByClassName('indivGraphStat')[i].style.width = (100 / (numChildren + 1)) + "%"
+        }
+
+        document.getElementById('graphStatHolder').appendChild(d)
     }
 
     hexToRgb(hex) {
@@ -66,7 +87,7 @@ class AnimatedLineGraph {
     }
 
 
-    drawFrame(rawDataList, displayDataList) {
+    drawFrame() {
         // console.log(frameNum)
         this.prevTransX = 0
         this.prevTransY = 0
@@ -75,6 +96,7 @@ class AnimatedLineGraph {
         let currentIndex = Math.floor(this.frameNum / this.easing)
         let loopBeginFrame = 0
         let scrolling = false
+        let graphColor;
 
         // script to change max/min
         if(Math.floor(this.frameNum / this.easing) <= this.scrollThreshold){
@@ -108,8 +130,6 @@ class AnimatedLineGraph {
             loopBeginFrame = this.frameNum - (this.scrollThreshold * this.easing)
             scrolling = true
         }
-
-        console.log("loopbeginframe is: " + loopBeginFrame)
 
         for(var subInterval = loopBeginFrame; subInterval < this.frameNum+1; subInterval++){
             
@@ -145,7 +165,7 @@ class AnimatedLineGraph {
             let variableToUseForColor = (this.prop == "elevation") ? "incline" : this.prop
 
             let variableReadingForColor = rawDataList[Math.floor(subInterval/this.easing)][variableToUseForColor]
-            let graphColor;
+            
 
             if (this.spectrum.length == 0) {
                 graphColor = this.color
@@ -211,13 +231,18 @@ class AnimatedLineGraph {
         // let curr = rawDataList[Math.floor(subInterval/easing)][prop]
         // let next = rawDataList[Math.floor(subInterval/easing) + 1][prop]
         // document.getElementById('prediction').innerHTML = "Current: " + convertToHMS(curr + ((next - curr) *((subInterval%easing) / easing)), 2)
+        document.getElementById("graph_" + this.prop).getElementsByClassName('valueDisplay')[0].style.color = graphColor;
         if (this.prop != "elevation") {
-            document.getElementById('prediction_user').innerHTML = "Pace: " + displayDataList[Math.floor(subInterval/this.easing)-1][this.prop] 
+            document.getElementById("graph_" + this.prop).getElementsByClassName('valueDisplay')[0].innerHTML = displayDataList[Math.floor(subInterval/this.easing)-1][this.prop] 
         } else {
-            document.getElementById('prediction_elev').innerHTML = "Elevation: " + displayDataList[Math.floor(subInterval/this.easing)-1][this.prop] 
-            + " (" + displayDataList[Math.floor(subInterval/this.easing)-1].incline  + " gradient)"
+            
+            document.getElementById("graph_" + this.prop).getElementsByClassName('valueDisplay')[0].innerHTML = displayDataList[Math.floor(subInterval/this.easing)-1][this.prop] 
+            + "<sup> (" + displayDataList[Math.floor(subInterval/this.easing)-1].incline  + ")</sup>"
         }
 
+        document.getElementById("graph_time").getElementsByClassName('valueDisplay')[0].innerHTML = displayDataList[Math.floor(subInterval/this.easing)-1].time
+
+        document.getElementById("graph_distance").getElementsByClassName('valueDisplay')[0].innerHTML = displayDataList[Math.floor(subInterval/this.easing)-1].distance
         
         document.getElementById('minY').innerHTML = "minimum Y: " + this.graphYMin
         document.getElementById('maxY').innerHTML = "maximum Y: " + this.graphYMax
@@ -240,7 +265,15 @@ function startAnimation() {
         }
     )
 
-    
+    const predBarGraph = new AnimatedLineGraph(
+        options = {
+            prop: "projectedFinish",
+            easing: 1,
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+            color: "red"
+        }
+    )
 
     const elevBarGraph = new AnimatedLineGraph(
         options = {
@@ -248,11 +281,11 @@ function startAnimation() {
             easing: 1,
             canvasWidth: canvasWidth,
             canvasHeight: canvasHeight,
-            color: "lightgray",
+            color: "gray",
             offsetYBottom: 0.05,
             offsetYTop: 0.7,
             fill: true,
-            spectrum: [{color: "#19a8a1", value: -12.5}, {color: "#00db16", value: -8}, {color: "#959c94", value: 0}, {color: "#e39f20", value: 8}, {color: "#fc0362", value: 12.5}]
+            spectrum: [{color: "#19a8a1", value: -5.5}, {color: "#00db16", value: -3}, {color: "#959c94", value: 0}, {color: "#e39f20", value: 3}, {color: "#fc0362", value: 5.5}]
         }
     )
 
@@ -263,12 +296,15 @@ function startAnimation() {
         } else {
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-            elevBarGraph.drawFrame(rawDataList, displayDataList)
+            elevBarGraph.drawFrame()
             elevBarGraph.frameNum+=1
 
-            userBarGraph.drawFrame(rawDataList, displayDataList)
+            userBarGraph.drawFrame()
             userBarGraph.frameNum+=1
+
+            predBarGraph.drawFrame()
+            predBarGraph.frameNum+=1
         }
         
-    }, 50)
+    }, 100)
 }
