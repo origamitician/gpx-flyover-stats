@@ -16,8 +16,10 @@
     <!--<div id = "animatedChart"></div>-->
     <button onclick="startAnimation()">Draw</button>
     <!--button onclick="drawBarGraphFrame('instPace', 500)">Draw</button>-->
-
+    <br>
     <canvas id="myCanvas" width="1000" height="400"></canvas>
+    <br>
+
     <div id = "graphStatHolder">
         <div class = "indivGraphStat" id="graph_time">
             <p class = "valueDisplay"></p>
@@ -29,6 +31,29 @@
             <p class = "valueVariable">DISTANCE</p>
         </div>
     </div>
+
+    <label for="w" class="inputName">Canvas Dimensions: </label>
+    <input type="number" name="w" placeholder="width">
+    <input type="number" name="h" placeholder="height">
+
+    <br>
+    <label for="scrollRate" class="inputName">Scroll threshold</label>
+    
+    <input type="number" name="scrollRate" placeholder="num" class="numInputForGraph" value=125>
+    <p class = "variableExplanation">After X frames, the graphs will start scrolling. (default 125)</p>
+
+    <br>
+    <label for="datapointsPerFrame" class="inputName">Datapoints per frame</label>
+    
+    <input type="number" name="datapointsPerFrame" placeholder="num" class="numInputForGraph" value=5 onchange="rerunRawPointsProcess()">
+    <p id="pleaseWaitMsg">Please Wait...</p>
+    <p class = "variableExplanation">Every second of the inputted GPX file becomes a datapoint. (default 5)</p>
+
+    <br>
+    <label for="frameDuration" class="inputName">Frame duration (in ms)</label>
+    
+    <input type="number" name="frameDuration" placeholder="num" class="numInputForGraph" value=100>
+    <p class = "variableExplanation">Choose smaller number for faster animation. (default 100)</p>
     
 
     <div id = "predictionDivs"></div>
@@ -44,6 +69,7 @@
             <td>Projected finish</td>
             <td>Split prediction</td>
             <td>Cadence</td>
+            <td>Avg Cadence (last 60s)</td>
             <td>Elevation</td>
             <td>Incline</td>
         </tr>

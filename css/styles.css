@@ -66,3 +66,26 @@ td {
     text-align: center;
     margin: 1% 0 2% 0
 }
+
+.numInputForGraph, .inputName {
+    font-size: 150%;
+    font-family: "National Park", sans-serif;
+    
+}
+
+.numInputForGraph {
+    margin-left: 1%;
+    width: 10%;
+    opacity: 0.9
+}
+
+.variableExplanation {
+    margin-top: 0.5%;
+    opacity: 0.8
+}
+
+#pleaseWaitMsg {
+    color: red;
+    margin: 0;
+    display: none;
+}

@@ -65,7 +65,7 @@ const splits = [
     {label: 'whatevercomesafter26.2', distance: 9999999, fastestSplit: 99999, movingDist: null},
 ]
 
-function processRawPoints(rawGPXPoints) {
+function processRawPoints(rawGPXPoints, byTimeOrDist) {
     rawDataList = []
     displayDataList = []
     let currentSplitIndex = 0
@@ -73,11 +73,15 @@ function processRawPoints(rawGPXPoints) {
     let totalDist = 0
     let totalInstDist = 0
     let totalMovingDist = 0
+    let totalInstCadence = 0
     let totalMovingCadence = 0
     let totalInstElevGain = 0
     let distanceOfTrack = 0
-    let increment = 5
+    let timeIncrement = Number(document.getElementsByName('datapointsPerFrame')[0].value)
+    let distIncrement = 0.01
     let movingSeconds = 60
+
+    
 
     // preprocess the GPX data by calculating full distance and checking for any gaps that are >1 second between datapoints.
     let i = 0
@@ -107,22 +111,27 @@ function processRawPoints(rawGPXPoints) {
         let dist = haversineDistanceFT(rawGPXPoints[i].lat, rawGPXPoints[i].long, rawGPXPoints[i+1].lat, rawGPXPoints[i+1].long);
         totalDist += dist
         totalInstDist += dist
-        totalMovingCadence += rawGPXPoints[i+1].cadence
+        totalInstCadence += rawGPXPoints[i].cadence
         totalInstElevGain += (rawGPXPoints[i+1].elev - rawGPXPoints[i].elev)
         
         if (i < movingSeconds) {
             totalMovingDist += dist
+            totalMovingCadence += rawGPXPoints[i].cadence
         } else {
             totalMovingDist += (dist - haversineDistanceFT(rawGPXPoints[i-movingSeconds].lat, rawGPXPoints[i-movingSeconds].long, rawGPXPoints[i-movingSeconds+1].lat, rawGPXPoints[i-movingSeconds+1].long))
+            totalMovingCadence += rawGPXPoints[i].cadence - rawGPXPoints[i-movingSeconds].cadence
         }
 
-        if (i % increment == 0 && i > 0) {
+        if (i % timeIncrement == 0 && i > 0) {
             // every X seconds
             let movPace;
+            let movCadence;
             if (i < movingSeconds) {
                 movPace = i / (totalMovingDist / 5280)
+                movCadence = totalMovingCadence / i
             } else {
                 movPace = movingSeconds / (totalMovingDist / 5280)
+                movCadence = totalMovingCadence / movingSeconds
             }
 
             rawDataList.push({
@@ -130,10 +139,11 @@ function processRawPoints(rawGPXPoints) {
                 distance: totalDist, // in feet
                 distanceDiff: (rawDataList.length == 0) ? totalDist : (totalDist - rawDataList[rawDataList.length - 1].distance),
                 pace: 3600 / (i / (totalDist / 5280)),
-                instantaneousPace: 3600 / (increment / (totalInstDist / 5280)),
+                instantaneousPace: 3600 / (timeIncrement / (totalInstDist / 5280)),
                 movingPace: 3600 / movPace,
                 projectedFinish: i * (distanceOfTrack / totalDist),
-                cadence: totalMovingCadence / increment,
+                instantaneousCadence: totalInstCadence / timeIncrement,
+                movingCadence: movCadence,
                 elevation: rawGPXPoints[i].elev,
                 incline: (totalInstElevGain / totalInstDist) * 100
             })
@@ -149,13 +159,13 @@ function processRawPoints(rawGPXPoints) {
                         splits[j].startDist = 0
                     } else {
                         let headVal = rawDataList[rawDataList.length - 1].distanceDiff
-                        let tailVal = rawDataList[rawDataList.length - Math.round(splits[j].fastestSplit / increment)].distanceDiff
+                        let tailVal = rawDataList[rawDataList.length - Math.round(splits[j].fastestSplit / timeIncrement)].distanceDiff
                         splits[j].movingDist += headVal - tailVal 
 
                         while (splits[j].movingDist > splits[j].distance) {
                             // move the tail forward.
-                            let tailIndex = rawDataList.length - 1 - Math.round(splits[j].fastestSplit / increment)
-                            splits[j].fastestSplit -= increment
+                            let tailIndex = rawDataList.length - 1 - Math.round(splits[j].fastestSplit / timeIncrement)
+                            splits[j].fastestSplit -= timeIncrement
                             splits[j].movingDist -= rawDataList[tailIndex].distanceDiff
                             splits[j].endDist = rawDataList[rawDataList.length - 1].distance
                             splits[j].startDist = splits[j].endDist - splits[j].distance
@@ -177,18 +187,21 @@ function processRawPoints(rawGPXPoints) {
                 time: convertToHMS(i),
                 distance: (totalDist / 5280).toFixed(3) + "mi",
                 pace: convertToHMS(i / (totalDist / 5280), 2) + "/mi",
-                instantaneousPace: convertToHMS(increment / (totalInstDist / 5280), 2) + "/mi",
+                instantaneousPace: convertToHMS(timeIncrement / (totalInstDist / 5280), 2) + "/mi",
                 movingPace: convertToHMS(movPace, 2) + "/mi",
                 projectedFinish: convertToHMS(i * (distanceOfTrack / totalDist)),
                 splitPrediction: splits[currentSplitIndex].label + " - " + convertToHMS(i * (splits[currentSplitIndex].distance / totalDist)),
-                cadence: (totalMovingCadence / increment).toFixed(1) + " spm",
+                instantaneousCadence: (totalInstCadence / timeIncrement).toFixed(1) + " spm",
+                movingCadence: movCadence.toFixed(1) + "spm",
                 elevation: (rawGPXPoints[i].elev).toFixed(1) + "ft",
                 incline: ((totalInstElevGain / totalInstDist) * 100).toFixed(2) + "%"
             })
             totalInstDist = 0
-            totalMovingCadence = 0
+            totalInstCadence = 0
             totalInstElevGain = 0
         }
+
+        
     }
 
     console.log(rawDataList)
@@ -204,6 +217,7 @@ function processRawPoints(rawGPXPoints) {
 
     displayDataList.forEach((item) => {
         const trow = document.createElement('tr')
+        trow.className = "numericalTableRow"
         Object.keys(item).forEach((key) => {
             let cell = document.createElement('td')
             cell.innerHTML = item[key]
@@ -211,4 +225,14 @@ function processRawPoints(rawGPXPoints) {
         })
         document.getElementById('data').appendChild(trow)
     })
+
+    
+}
+
+function rerunRawPointsProcess() {
+    document.getElementById('pleaseWaitMsg').style.display="block"
+    const toRemove = document.querySelectorAll('.numericalTableRow')
+    toRemove.forEach(elem => elem.remove())
+    processRawPoints(GPXData)
+    document.getElementById('pleaseWaitMsg').style.display="none"
 }

@@ -9,7 +9,7 @@ class AnimatedLineGraph {
         this.prevTransX = -1
         this.prevTransY = -1
 
-        this.scrollThreshold = options.scrollThreshold || 150
+        this.scrollThreshold = options.scrollThreshold || 125
         this.prop = options.prop || "avgPace"
         this.easing = options.easing || 1
         this.frameNum = 0
@@ -205,7 +205,7 @@ class AnimatedLineGraph {
             }
             this.ctx.closePath()
         
-            if (((Math.floor(subInterval/this.easing) + 1) % 60) == 0) {
+            if (((Math.floor(subInterval/this.easing) + 1) % 120) == 0) {
 
                 if (subInterval % this.easing == 0) {
                     this.ctx.beginPath();
@@ -261,17 +261,22 @@ function startAnimation() {
             prop: "movingPace",
             easing: 1,
             canvasWidth: canvasWidth,
-            canvasHeight: canvasHeight
+            canvasHeight: canvasHeight,
+            fill: false,
+            color: "purple"
+            /*spectrum: [{color: "#846f8f", value: 7.74}, {color: "#0c050f", value: 8}, {color: "#a903fc", value: 8.88}, {color: "#fc0303", value: 9.32}]*/
         }
     )
 
     const predBarGraph = new AnimatedLineGraph(
         options = {
-            prop: "projectedFinish",
+            prop: "movingCadence",
             easing: 1,
             canvasWidth: canvasWidth,
             canvasHeight: canvasHeight,
-            color: "red"
+            color: "purple",
+            fill: false,
+            spectrum: [{color: "#327a11", value: 168}, {color: "#a8a11d", value: 170}, {color: "#eb9234", value: 172}, {color: "#eb5834", value: 174}]
         }
     )
 
@@ -285,12 +290,12 @@ function startAnimation() {
             offsetYBottom: 0.05,
             offsetYTop: 0.7,
             fill: true,
-            spectrum: [{color: "#19a8a1", value: -5.5}, {color: "#00db16", value: -3}, {color: "#959c94", value: 0}, {color: "#e39f20", value: 3}, {color: "#fc0362", value: 5.5}]
+            spectrum: [{color: "#19a8a1", value: -5}, {color: "#00db16", value: -2.5}, {color: "#959c94", value: 0}, {color: "#e39f20", value: 2.5}, {color: "#fc0362", value: 5}, {color: "#52195e", value: 8}]
         }
     )
 
     const graphInterval = setInterval(() => {
-        if (elevBarGraph.frameNum >= (rawDataList.length - 1) * elevBarGraph.easing) {
+        if (userBarGraph.frameNum >= (rawDataList.length - 1) * userBarGraph.easing) {
 
             clearInterval(graphInterval)
         } else {
@@ -306,5 +311,5 @@ function startAnimation() {
             predBarGraph.frameNum+=1
         }
         
-    }, 100)
+    }, Number(document.getElementsByName('frameDuration')[0].value))
 }
